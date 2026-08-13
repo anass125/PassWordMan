@@ -24,7 +24,7 @@ const passwordRoutes = require("./routes/passwordRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // ─── SECURITY HEADERS ────────────────────────────────────────────────────────
 app.use(
@@ -94,7 +94,7 @@ mongoose
     // Worker connection is managed independently inside startWorker().
     startWorker();                                                     // ← added
 
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, "0.0.0.0", () => {
       console.log(`[Server] Running on http://localhost:${PORT}`);
     });
 
