@@ -377,27 +377,44 @@ const createPassword = async (req, res) => {
     await invalidateCache(allPasswordsKey(req.user.id));
 
     // ── Background jobs (non-blocking) ────────────────────────────────────
-    await addJob("passwordCreated", {
-      userId:     req.user.id,
+    // await addJob("passwordCreated", {
+    //   userId:     req.user.id,
+    //   passwordId: newEntry._id,
+    //   site,
+    //   username,
+    //   createdAt:  newEntry.createdAt,
+    // });
+
+    // await addJob("securityAudit", {
+    //   userId:      req.user.id,
+    //   triggeredBy: "passwordCreated",
+    //   auditScope:  "single",
+    //   passwordId:  newEntry._id,
+    // });
+
+    // NEW — fire and forget, never blocks the response
+    addJob("passwordCreated", {
+      userId: req.user.id,
       passwordId: newEntry._id,
       site,
       username,
-      createdAt:  newEntry.createdAt,
-    });
+      createdAt: newEntry.createdAt,
+    }).catch((err) => console.error("[Queue] passwordCreated enqueue failed:", err.message));
 
-    await addJob("securityAudit", {
-      userId:      req.user.id,
+    addJob("securityAudit", {
+      userId: req.user.id,
       triggeredBy: "passwordCreated",
-      auditScope:  "single",
-      passwordId:  newEntry._id,
-    });
+      auditScope: "single",
+      passwordId: newEntry._id,
+    }).catch((err) => console.error("[Queue] securityAudit enqueue failed:", err.message));
+
 
     logActivity(req.user.id, ACTIVITY_TYPES.PASSWORD_CREATED, {
-      resourceId:   newEntry._id,
+      resourceId: newEntry._id,
       resourceType: "password",
-      metadata:     { site },
-      ipAddress:    req.ip,
-      userAgent:    req.headers["user-agent"],
+      metadata: { site },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
     });
     // ─────────────────────────────────────────────────────────────────────
 
@@ -426,10 +443,10 @@ const updatePassword = async (req, res) => {
 
     const { site, username, password, notes } = req.body;
 
-    entry.site     = site     ?? entry.site;
+    entry.site = site ?? entry.site;
     entry.username = username ?? entry.username;
     entry.password = password ?? entry.password;
-    entry.notes    = notes    ?? entry.notes;
+    entry.notes = notes ?? entry.notes;
 
     await entry.save();
 
@@ -438,11 +455,11 @@ const updatePassword = async (req, res) => {
 
     // ── Background jobs (non-blocking) ────────────────────────────────────
     logActivity(req.user.id, ACTIVITY_TYPES.PASSWORD_UPDATED, {
-      resourceId:   entry._id,
+      resourceId: entry._id,
       resourceType: "password",
-      metadata:     { site: entry.site },
-      ipAddress:    req.ip,
-      userAgent:    req.headers["user-agent"],
+      metadata: { site: entry.site },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
     });
     // ─────────────────────────────────────────────────────────────────────
 
@@ -470,20 +487,27 @@ const deletePassword = async (req, res) => {
     await invalidateCache(allPasswordsKey(req.user.id));
 
     // ── Background jobs (non-blocking) ────────────────────────────────────
-    await addJob("passwordDeleted", {
-      userId:     req.user.id,
+    // await addJob("passwordDeleted", {
+    //   userId: req.user.id,
+    //   passwordId: entry._id,
+    //   site: entry.site,
+    //   deletedAt: new Date().toISOString(),
+    //   deletedBy: req.user.id,
+    // });
+    addJob("passwordDeleted", {
+      userId: req.user.id,
       passwordId: entry._id,
-      site:       entry.site,
-      deletedAt:  new Date().toISOString(),
-      deletedBy:  req.user.id,
-    });
+      site: entry.site,
+      deletedAt: new Date().toISOString(),
+      deletedBy: req.user.id,
+    }).catch((err) => console.error("[Queue] passwordDeleted enqueue failed:", err.message));
 
     logActivity(req.user.id, ACTIVITY_TYPES.PASSWORD_DELETED, {
-      resourceId:   entry._id,
+      resourceId: entry._id,
       resourceType: "password",
-      metadata:     { site: entry.site },
-      ipAddress:    req.ip,
-      userAgent:    req.headers["user-agent"],
+      metadata: { site: entry.site },
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
     });
     // ─────────────────────────────────────────────────────────────────────
 
